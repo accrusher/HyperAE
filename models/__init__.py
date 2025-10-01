@@ -19,13 +19,13 @@ def build_model(args):
     num_features = args.num_features
     num_dec_layers = args.num_dec_layers
 
-    decoder_AS_type = args.decoder_AS_type
-    loss_E_A_para = args.loss_E_A_para
-    loss_E_Z_para = args.loss_E_Z_para
-    loss_E_H_para = args.loss_E_H_para#HyperGragh
+    decoder_AH_type = args.decoder_AH_type
+    loss_DEG_A_para = args.loss_DEG_A_para
+    loss_DEG_Z_para = args.loss_DEG_Z_para
+    loss_DEG_H_para = args.loss_DEG_H_para#HyperGragh
 
-    loss_D_A_para = args.loss_D_A_para
-    loss_D_H_para = args.loss_D_H_para#HyperGraph
+    loss_APA_A2H_para = args.loss_APA_A2H_para
+    loss_APA_H2A_para = args.loss_APA_H2A_para#HyperGraph
 
     #alpha = args.alpha
 
@@ -44,12 +44,12 @@ def build_model(args):
         encoder_type=encoder_type,
         decoder_type=decoder_type,
         norm=norm,
-        decoder_AS_type=decoder_AS_type,
-        loss_E_A_para=loss_E_A_para,
-        loss_E_Z_para=loss_E_Z_para,
-        loss_E_H_para=loss_E_H_para,#HyperGraph
-        loss_D_A_para=loss_D_A_para,
-        loss_D_H_para=loss_D_H_para,#HyperGraph
+        decoder_AH_type=decoder_AH_type,
+        loss_DEG_A_para=loss_DEG_A_para,
+        loss_DEG_Z_para=loss_DEG_Z_para,
+        loss_DEG_H_para=loss_DEG_H_para,#HyperGraph
+        loss_APA_A2H_para=loss_APA_A2H_para,
+        loss_APA_H2A_para=loss_APA_H2A_para,#HyperGraph
         #alpha=alpha
     )
     return model

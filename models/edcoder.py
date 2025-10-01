@@ -70,21 +70,21 @@ class PreModel(nn.Module):
             norm: Optional[str],
             encoder_type: str,
             decoder_type: str,
-            decoder_AS_type: str,
-            loss_E_A_para: float,
-            loss_E_Z_para: float,
-            loss_E_H_para: float,
-            loss_D_A_para: float,
-            loss_D_H_para: float,
+            decoder_AH_type: str,
+            loss_DEG_A_para: float,
+            loss_DEG_Z_para: float,
+            loss_DEG_H_para: float,
+            loss_APA_A2H_para: float,
+            loss_APA_H2A_para: float,
             #alpha: float,
     ):
         super(PreModel, self).__init__()
-        self.decoder_AS_type = decoder_AS_type
-        self.loss_E_A_para = loss_E_A_para
-        self.loss_E_Z_para = loss_E_Z_para
-        self.loss_E_H_para = loss_E_H_para#HyperGraph
-        self.loss_D_A_para = loss_D_A_para
-        self.loss_D_H_para = loss_D_H_para#HyperGraph
+        self.decoder_AH_type = decoder_AH_type
+        self.loss_DEG_A_para = loss_DEG_A_para
+        self.loss_DEG_Z_para = loss_DEG_Z_para
+        self.loss_DEG_H_para = loss_DEG_H_para#HyperGraph
+        self.loss_APA_A2H_para = loss_APA_A2H_para
+        self.loss_APA_H2A_para = loss_APA_H2A_para#HyperGraph
         #self.alpha=alpha
 
         assert num_hidden % nhead == 0
@@ -132,24 +132,24 @@ class PreModel(nn.Module):
         self.predictor_pos = LightResidualPredictor(num_hidden, feat_drop)
         self.predictor_neg = LightResidualPredictor(num_hidden, feat_drop)
 
-        assert decoder_AS_type == "cat" or decoder_AS_type == "mean"
-        decoder_AS_in_dim = None
-        if decoder_AS_type == "cat":
-            decoder_AS_in_dim = dec_in_dim * 2
-        elif decoder_AS_type == "mean":
-            decoder_AS_in_dim = dec_in_dim
+        assert decoder_AH_type == "cat" or decoder_AH_type == "mean"
+        decoder_AH_in_dim = None
+        if decoder_AH_type == "cat":
+            decoder_AH_in_dim = dec_in_dim * 2
+        elif decoder_AH_type == "mean":
+            decoder_AH_in_dim = dec_in_dim
 
-        self.decoder_AS =setup_module(m_type=decoder_type,enc_dec="decoding",in_dim=decoder_AS_in_dim,num_hidden=dec_num_hidden,out_dim=in_dim,nhead_out=nhead_out,num_layers=num_dec_layers,nhead=nhead,activation=activation,dropout=feat_drop,attn_drop=attn_drop,negative_slope=negative_slope,residual=residual,norm=norm,concat_out=True,)
+        self.decoder_AS =setup_module(m_type=decoder_type,enc_dec="decoding",in_dim=decoder_AH_in_dim,num_hidden=dec_num_hidden,out_dim=in_dim,nhead_out=nhead_out,num_layers=num_dec_layers,nhead=nhead,activation=activation,dropout=feat_drop,attn_drop=attn_drop,negative_slope=negative_slope,residual=residual,norm=norm,concat_out=True,)
 
     def forward(self, graph_adj, graph_hyper, x, missing_mask, missing_index):
         Z_A = self.encoder_A(graph_adj, x).to(device=x.device)
         Z_H = self.encoder_H(graph_hyper, x).to(device=x.device)
 
-        lossD = self.loss_D_part(Z_A, Z_H, x, missing_mask, missing_index)
-        lossE = self.loss_E_part(Z_H, Z_A, missing_index, x, graph_adj, graph_hyper) 
+        lossD = self.loss_APA_part(Z_A, Z_H, x, missing_mask, missing_index)
+        lossE = self.loss_DEG_part(Z_H, Z_A, missing_index, x, graph_adj, graph_hyper) 
         return lossD, lossE
     
-    def loss_D_part(self, Z_A, Z_H, x, missing_mask, missing_index):
+    def loss_APA_part(self, Z_A, Z_H, x, missing_mask, missing_index):
 
         Z_H_hat = self.predictor_A2H(Z_A).to(device=Z_H.device)
         Z_H_pos, Z_H_neg, ortho_lossH = self.decomposer(Z_H)
@@ -163,21 +163,21 @@ class PreModel(nn.Module):
         #L_H2A = 0.8 * L_posA + math.exp(-4*L_negA) + ortho_lossH
         L_H2A = F.mse_loss(Z_A_hat * valid_mask,Z_A * valid_mask)  + math.exp(-4*L_negA)
         L_A2H = F.mse_loss(Z_H_hat * valid_mask,Z_H * valid_mask)
-        return self.loss_D_H_para * L_H2A + self.loss_D_A_para * L_A2H
+        return self.loss_APA_H2A_para * L_H2A + self.loss_APA_A2H_para * L_A2H
         
 
-    def loss_E_part(self, Z_H, Z_A, missing_index, x, graph_adj, graph_hyper):
-        loss_A = self.loss_E_structure_part(Z_A, graph_adj, "A")
-        loss_H = self.loss_E_hyper_part(Z_H, graph_hyper, "H")
-        if self.decoder_AS_type == "cat":
+    def loss_DEG_part(self, Z_H, Z_A, missing_index, x, graph_adj, graph_hyper):
+        loss_A = self.loss_DEG_structure_part(Z_A, graph_adj, "A")
+        loss_H = self.loss_DEG_hyper_part(Z_H, graph_hyper, "H")
+        if self.decoder_AH_type == "cat":
             restruct_Z = self.decoder_AS(torch.cat([Z_H, Z_A], dim=1))
-        elif self.decoder_AS_type == "mean":
+        elif self.decoder_AH_type == "mean":
             restruct_Z = self.decoder_AS((Z_H + Z_A) / 2)
-        loss_Z = self._get_loss_diff(restruct_Z, x, missing_index)
+        loss_Z = self._get_loss_APAiff(restruct_Z, x, missing_index)
         
-        return self.loss_E_H_para * loss_H + self.loss_E_A_para * loss_A + self.loss_E_Z_para * loss_Z
+        return self.loss_DEG_H_para * loss_H + self.loss_DEG_A_para * loss_A + self.loss_DEG_Z_para * loss_Z
 
-    def loss_E_structure_part(self, Z, G, decoder):
+    def loss_DEG_structure_part(self, Z, G, decoder):
         assert decoder == "A" or decoder == "H"
         u, v = G.edges()
         if u.numel() == 0:
@@ -204,7 +204,7 @@ class PreModel(nn.Module):
         out = decode_pairs(self.decoder_A, Z, samples) if decoder == "A" else decode_pairs(self.decoder_H, Z, samples)
         return F.binary_cross_entropy_with_logits(out.squeeze(), labels)
 
-    def loss_E_hyper_part(self, Z_H, hypergraph, decoder):
+    def loss_DEG_hyper_part(self, Z_H, hypergraph, decoder):
         num_hyperedges = hypergraph.num_nodes('hyperedge')
         if num_hyperedges == 0: return torch.tensor(0.0, device=Z_H.device)
         
@@ -246,7 +246,7 @@ class PreModel(nn.Module):
 
     
     @staticmethod
-    def _get_loss_diff(input, target, missing_index):
+    def _get_loss_APAiff(input, target, missing_index):
         mask = torch.ones_like(input, dtype=torch.float32)
         mask[missing_index, :] = 0
         loss = F.kl_div(F.log_softmax(input * mask, dim=1), F.softmax(target * mask, dim=1), reduction='batchmean')

@@ -35,8 +35,8 @@ def train(model, graph_adj,graph_hyper, feat, missing_index, optimizer, schedule
     for epoch in epoch_iter:
         model.train()
 
-        loss_D, loss_E = model(graph_adj, graph_hyper, x, missing_mask, missing_index)
-        loss = args.D_para * loss_D + args.E_para * loss_E
+        loss_APA, loss_DEG = model(graph_adj, graph_hyper, x, missing_mask, missing_index)
+        loss = args.APA_para * loss_APA + args.DEG_para * loss_DEG
 
         optimizer.zero_grad()
         loss.backward()
@@ -46,13 +46,13 @@ def train(model, graph_adj,graph_hyper, feat, missing_index, optimizer, schedule
 
         if  epoch==max_epoch-1 or epoch % 10 == 0:
             result_str = cluster_probing_full_batch(model, graph_adj, x, device)
-            loss_log = {"loss_D": args.D_para * loss_D, "loss_E": args.E_para * loss_E, "loss": loss}
+            loss_log = {"loss_APA": args.APA_para * loss_APA, "loss_DEG": args.DEG_para * loss_DEG, "loss": loss}
             print(result_str)
 
     print("Final Results:")
     print(result_str)
-    with open('test.txt', 'a') as file:
-        file.write(str(result_str)+'\n')
+    #with open('test.txt', 'a') as file:
+    #    file.write(str(result_str)+'\n')
     return model
 
 

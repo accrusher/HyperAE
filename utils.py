@@ -39,15 +39,15 @@ def build_args():
     parser.add_argument("--max_epoch", type=int, required=True,
                         help="number of training epochs")
 
-    parser.add_argument("--D_para", type=float, required=True)
-    parser.add_argument("--E_para", type=float, required=True)
-    parser.add_argument("--decoder_AS_type", type=str, required=True, choices=["cat", "mean"])
-    parser.add_argument("--loss_E_A_para", type=float, required=True)
-    parser.add_argument("--loss_E_Z_para", type=float, required=True)
-    parser.add_argument("--loss_E_H_para", type=float, required=True)
+    parser.add_argument("--APA_para", type=float, default=10)
+    parser.add_argument("--DEG_para", type=float, default=10)
+    parser.add_argument("--decoder_AH_type", type=str, required=True, choices=["cat", "mean"])
+    parser.add_argument("--loss_DEG_A_para", type=float, default=1)
+    parser.add_argument("--loss_DEG_Z_para", type=float, default=250)
+    parser.add_argument("--loss_DEG_H_para", type=float, default=0.5)
     
-    parser.add_argument("--loss_D_A_para", type=float, required=True)
-    parser.add_argument("--loss_D_H_para", type=float, required=True)
+    parser.add_argument("--loss_APA_A2H_para", type=float, default=0.1)
+    parser.add_argument("--loss_APA_H2A_para", type=float, default=0.9)
 
     parser.add_argument("--hyperbuild", type=int, default=3, help="hypergraph build type")
 
